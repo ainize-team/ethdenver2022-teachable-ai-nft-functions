@@ -162,7 +162,7 @@ exports.ainftMappingSchedulerHarmony = functions.runWith({ memory: '1GB', timeou
     if (!pendingTxs) {
       return;
     }
-    const lastRun = await admin.database().ref('teachable_ainft/hrc_mapping_scheduler/last_run').once('value');
+    const lastRun = await admin.database().ref('teachable_ainft/hrc721_mapping_scheduler/last_run').once('value');
     if (lastRun.exists()) {
       // Timed out while waiting for tx confirmation or set value failed.
       logger.info(`Last run didn't finish successfully: ${JSON.stringify(lastRun.val(), null, 2)}`);
@@ -226,7 +226,7 @@ exports.ainftMappingSchedulerHarmony = functions.runWith({ memory: '1GB', timeou
       }
 
       let errorMsg;
-      await admin.database().ref('teachable_ainft/hrc_mapping_scheduler/last_run').set({
+      await admin.database().ref('teachable_ainft/hrc721_mapping_scheduler/last_run').set({
         txHash,
         ainftAppName,
         txReceipt,
@@ -242,14 +242,14 @@ exports.ainftMappingSchedulerHarmony = functions.runWith({ memory: '1GB', timeou
         })
         .catch(async (error) => {
           errorMsg = `Failed to set hrc721_to_ainft mapping: ${error}`;
-          await admin.database().ref('teachable_ainft/hrc_mapping_scheduler/last_run/error').set(errorMsg);
+          await admin.database().ref('teachable_ainft/hrc721_mapping_scheduler/last_run/error').set(errorMsg);
           return null;
         });
       logger.debug(`setMappingRes: ${JSON.stringify(setMappingRes, null, 2)}`);
       if (!setMappingRes) {
         if (!errorMsg) {
           errorMsg = 'Something went wrong while setting hrc721_to_ainft mapping';
-          await admin.database().ref('teachable_ainft/hrc_mapping_scheduler/last_run/error').set(errorMsg);
+          await admin.database().ref('teachable_ainft/hrc721_mapping_scheduler/last_run/error').set(errorMsg);
         }
         logger.error(errorMsg);
         await sendSlackMessage(
@@ -258,7 +258,7 @@ exports.ainftMappingSchedulerHarmony = functions.runWith({ memory: '1GB', timeou
         return;
       }
       const ainTxHash = setMappingRes.tx_hash;
-      await admin.database().ref('teachable_ainft/hrc_mapping_scheduler/last_run/setMappingRes').set(setMappingRes);
+      await admin.database().ref('teachable_ainft/hrc721_mapping_scheduler/last_run/setMappingRes').set(setMappingRes);
       if (setMappingRes.result.code === 0) {
         let txFinalized = (await isAinTxFinalized(
             ain, ainTxHash, ainftAppName, sourceNftAddress, sourceNftTokenId, tokenId, setMappingRes));
@@ -268,11 +268,11 @@ exports.ainftMappingSchedulerHarmony = functions.runWith({ memory: '1GB', timeou
               ain, ainTxHash, ainftAppName, sourceNftAddress, sourceNftTokenId, tokenId, setMappingRes));
         }
         await moveHrc721MintTx(txHash, ainftAppName, txReceipt);
-        await admin.database().ref('teachable_ainft/hrc_mapping_scheduler/last_run').remove();
+        await admin.database().ref('teachable_ainft/hrc721_mapping_scheduler/last_run').remove();
       } else {
         const errorMsg = 'Failed to set hrc721 token id -> ainft id mapping';
         logger.error(errorMsg);
-        await admin.database().ref('teachable_ainft/hrc_mapping_scheduler/last_run/error').set(errorMsg);
+        await admin.database().ref('teachable_ainft/hrc721_mapping_scheduler/last_run/error').set(errorMsg);
         await sendSlackMessage(
             errorMsg, txHash, ainftAppName, sourceNftAddress, sourceNftTokenId, tokenId, setMappingRes);
         // Stop the current run.
